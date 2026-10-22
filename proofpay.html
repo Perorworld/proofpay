@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ProofPay</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #eef2f5;
+    --panel: #ffffff;
+    --ink: #14212b;
+    --muted: #5b6b78;
+    --line: #d5dde3;
+    --accent: #1f4e79;
+    --accent-ink: #ffffff;
+    --ok: #1e7b4f;
+    --ok-bg: #e3f3ea;
+    --no: #b3382c;
+    --no-bg: #f9e5e2;
+    --wait: #8a6414;
+    --wait-bg: #f8efd9;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f171d;
+      --panel: #17222b;
+      --ink: #e8eef2;
+      --muted: #9aabb8;
+      --line: #2b3a46;
+      --accent: #6aa6dc;
+      --accent-ink: #0f171d;
+      --ok: #62c796;
+      --ok-bg: #163326;
+      --no: #f08a7d;
+      --no-bg: #3a1e1b;
+      --wait: #e6bf63;
+      --wait-bg: #36290e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: "Instrument Sans", system-ui, sans-serif;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 64px; }
+  header { margin-bottom: 24px; }
+  h1 { font-size: 2rem; margin: 0 0 4px; letter-spacing: -0.02em; }
+  header p { margin: 0; color: var(--muted); max-width: 60ch; }
+  h2 { font-size: 1.05rem; margin: 0 0 12px; }
+  .grid { display: grid; grid-template-columns: 300px 1fr; gap: 20px; align-items: start; }
+  @media (max-width: 800px) { .grid { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 20px;
+  }
+  label { display: block; font-size: 0.88rem; color: var(--muted); margin: 10px 0 4px; }
+  input, textarea {
+    width: 100%;
+    font: inherit;
+    color: var(--ink);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 9px 10px;
+  }
+  textarea { min-height: 64px; resize: vertical; }
+  input:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+  button {
+    font: inherit;
+    font-weight: 600;
+    background: var(--accent);
+    color: var(--accent-ink);
+    border: 0;
+    border-radius: 6px;
+    padding: 10px 16px;
+    cursor: pointer;
+    margin-top: 14px;
+  }
+  button.ghost { background: transparent; color: var(--accent); border: 1px solid var(--accent); }
+  button:disabled { opacity: 0.5; cursor: wait; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; min-width: 120px; }
+  .note { font-size: 0.86rem; color: var(--muted); margin-top: 8px; }
+  #status {
+    min-height: 44px;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 20px;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    color: var(--muted);
+  }
+  #status.busy { background: var(--wait-bg); color: var(--wait); border-color: transparent; }
+  #status.good { background: var(--ok-bg); color: var(--ok); border-color: transparent; }
+  #status.bad { background: var(--no-bg); color: var(--no); border-color: transparent; }
+  .jobs { list-style: none; margin: 0; padding: 0; }
+  .jobs button {
+    display: flex; justify-content: space-between; align-items: center;
+    width: 100%; margin: 0 0 6px; text-align: left;
+    background: var(--bg); color: var(--ink);
+    border: 1px solid var(--line); font-weight: 500;
+  }
+  .jobs button.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+  .tag { font-size: 0.78rem; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--line); color: var(--muted); }
+  .tag.ACCEPTED { background: var(--ok-bg); color: var(--ok); }
+  .tag.REJECTED { background: var(--no-bg); color: var(--no); }
+  .tag.SUBMITTED { background: var(--wait-bg); color: var(--wait); }
+  .verdict { border-radius: 10px; padding: 20px; margin-top: 16px; }
+  .verdict.ACCEPTED { background: var(--ok-bg); color: var(--ok); }
+  .verdict.REJECTED { background: var(--no-bg); color: var(--no); }
+  .verdict .big { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+  .verdict p { margin: 8px 0 0; color: var(--ink); }
+  dl { margin: 0; display: grid; grid-template-columns: 110px 1fr; gap: 6px 12px; }
+  dt { color: var(--muted); font-size: 0.9rem; }
+  dd { margin: 0; overflow-wrap: anywhere; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>ProofPay</h1>
+    <p>Freelance escrow with an AI judge. The client sets the rules first, the freelancer submits a link, and a GenLayer Intelligent Contract decides if the work meets the brief.</p>
+  </header>
+
+  <div class="card">
+    <h2>Connect to your contract</h2>
+    <label for="addr">Contract address (copy it from GenLayer Studio)</label>
+    <input id="addr" placeholder="0x...">
+    <div class="note">Network: GenLayer Studio. A test account is created in your browser automatically, no wallet needed.</div>
+    <button id="connect">Connect and load jobs</button>
+  </div>
+
+  <div id="status">Paste your contract address to begin.</div>
+
+  <div class="grid">
+    <aside>
+      <div class="card">
+        <h2>Jobs</h2>
+        <ul class="jobs" id="jobs"><li class="note">No jobs loaded yet.</li></ul>
+      </div>
+    </aside>
+
+    <main>
+      <div class="card">
+        <h2>1. Create a job (client)</h2>
+        <label for="title">Title</label>
+        <input id="title" placeholder="Logo design">
+        <label for="brief">Brief</label>
+        <textarea id="brief" placeholder="Design a simple logo for a coffee shop"></textarea>
+        <label for="criteria">Acceptance criteria</label>
+        <textarea id="criteria" placeholder="Must mention coffee"></textarea>
+        <label for="amount">Amount</label>
+        <input id="amount" type="number" min="1" value="100">
+        <button id="create" disabled>Create job</button>
+      </div>
+
+      <div class="card">
+        <h2>2. Submit work and get a verdict</h2>
+        <div class="row">
+          <div>
+            <label for="jobid">Job ID</label>
+            <input id="jobid" type="number" min="0" value="0">
+          </div>
+          <div style="flex:3">
+            <label for="url">Deliverable link (public, plain text works best)</label>
+            <input id="url" placeholder="https://raw.githubusercontent.com/Perorworld/proofpay-test/main/logo.md">
+          </div>
+        </div>
+        <div class="row">
+          <button id="submit" disabled>Submit work</button>
+          <button id="evaluate" class="ghost" disabled>Evaluate with AI</button>
+          <button id="refresh" class="ghost" disabled>Refresh job</button>
+        </div>
+        <div class="note">Evaluation can take a minute while validators reach agreement.</div>
+      </div>
+
+      <div class="card" id="detail">
+        <h2>Job details</h2>
+        <dl id="fields"><dt>Status</dt><dd>Choose a job to see its details.</dd></dl>
+        <div id="verdict"></div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script type="module">
+import { createClient, createAccount } from "https://esm.sh/genlayer-js";
+import { studionet } from "https://esm.sh/genlayer-js/chains";
+
+const $ = (id) => document.getElementById(id);
+const account = createAccount();
+const client = createClient({ chain: studionet, account });
+let address = null;
+
+function say(text, kind = "") {
+  const el = $("status");
+  el.textContent = text;
+  el.className = kind;
+}
+
+function setButtons(on) {
+  for (const id of ["create", "submit", "evaluate", "refresh"]) $(id).disabled = !on;
+}
+
+async function readJob(id) {
+  const raw = await client.readContract({ address, functionName: "get_job", args: [String(id)] });
+  return JSON.parse(raw);
+}
+
+async function write(functionName, args) {
+  const hash = await client.writeContract({ address, functionName, args, value: 0n });
+  await client.waitForTransactionReceipt({ hash, status: "ACCEPTED", retries: 120, interval: 3000 });
+  return hash;
+}
+
+async function loadJobs() {
+  const list = $("jobs");
+  list.innerHTML = "";
+  let count = 0;
+  for (let i = 0; i < 100; i++) {
+    let job;
+    try { job = await readJob(i); } catch { break; }
+    count++;
+    const li = document.createElement("li");
+    const btn = document.createElement("button");
+    btn.dataset.id = i;
+    const name = document.createElement("span");
+    name.textContent = `#${i} ${job.title}`;
+    const tag = document.createElement("span");
+    tag.className = "tag " + job.status;
+    tag.textContent = job.status;
+    btn.append(name, tag);
+    btn.onclick = () => { $("jobid").value = i; showJob(i); };
+    li.append(btn);
+    list.append(li);
+  }
+  if (!count) list.innerHTML = '<li class="note">No jobs yet. Create the first one.</li>';
+  return count;
+}
+
+async function showJob(id) {
+  document.querySelectorAll(".jobs button").forEach(b => b.classList.toggle("active", b.dataset.id == id));
+  const fields = $("fields");
+  const verdict = $("verdict");
+  verdict.innerHTML = "";
+  try {
+    const job = await readJob(id);
+    const rows = [
+      ["Title", job.title],
+      ["Brief", job.brief],
+      ["Criteria", job.criteria],
+      ["Amount", job.amount],
+      ["Deliverable", job.deliverable || "Not submitted yet"],
+      ["Status", job.status],
+      ["Payment", job.payment === "RELEASED" ? "Released (simulated)" : "Held in escrow (simulated)"],
+    ];
+    fields.innerHTML = "";
+    for (const [k, v] of rows) {
+      const dt = document.createElement("dt"); dt.textContent = k;
+      const dd = document.createElement("dd"); dd.textContent = v;
+      fields.append(dt, dd);
+    }
+    if (job.status === "ACCEPTED" || job.status === "REJECTED") {
+      const box = document.createElement("div");
+      box.className = "verdict " + job.status;
+      const big = document.createElement("div");
+      big.className = "big";
+      big.textContent = job.status === "ACCEPTED" ? "Work accepted" : "Work rejected";
+      const why = document.createElement("p");
+      why.textContent = job.reason;
+      box.append(big, why);
+      verdict.append(box);
+    }
+  } catch {
+    fields.innerHTML = "<dt>Status</dt><dd>That job does not exist yet.</dd>";
+  }
+}
+
+$("connect").onclick = async () => {
+  const value = $("addr").value.trim();
+  if (!value.startsWith("0x")) return say("Paste the contract address, it starts with 0x.", "bad");
+  address = value;
+  say("Connecting and loading jobs...", "busy");
+  try {
+    const n = await loadJobs();
+    setButtons(true);
+    say(`Connected. ${n} job${n === 1 ? "" : "s"} found.`, "good");
+    if (n) showJob(0);
+  } catch (e) {
+    say("Could not reach the contract. Check the address and that Studio is the network you deployed to.", "bad");
+  }
+};
+
+$("create").onclick = async () => {
+  const title = $("title").value.trim(), brief = $("brief").value.trim(), criteria = $("criteria").value.trim();
+  const amount = BigInt($("amount").value || "0");
+  if (!title || !brief || !criteria) return say("Fill in the title, brief and criteria first.", "bad");
+  setButtons(false);
+  say("Creating the job. Waiting for the network...", "busy");
+  try {
+    await write("create_job", [title, brief, criteria, amount]);
+    const n = await loadJobs();
+    $("jobid").value = n - 1;
+    await showJob(n - 1);
+    say(`Job #${n - 1} created. Now submit the work link below.`, "good");
+  } catch (e) {
+    say("Creating the job failed: " + (e.message || e), "bad");
+  }
+  setButtons(true);
+};
+
+$("submit").onclick = async () => {
+  const id = $("jobid").value, url = $("url").value.trim();
+  if (!url.startsWith("http")) return say("Paste a full link that starts with http.", "bad");
+  setButtons(false);
+  say("Submitting the work link...", "busy");
+  try {
+    await write("submit_work", [String(id), url]);
+    await loadJobs();
+    await showJob(id);
+    say("Work submitted. Click Evaluate with AI.", "good");
+  } catch (e) {
+    say("Submitting failed: " + (e.message || e), "bad");
+  }
+  setButtons(true);
+};
+
+$("evaluate").onclick = async () => {
+  const id = $("jobid").value;
+  setButtons(false);
+  say("The AI judge is reading the work. Validators must agree, this can take a minute...", "busy");
+  try {
+    await write("evaluate", [String(id)]);
+    await loadJobs();
+    await showJob(id);
+    say("Verdict recorded on GenLayer.", "good");
+  } catch (e) {
+    say("Evaluation failed: " + (e.message || e), "bad");
+  }
+  setButtons(true);
+};
+
+$("refresh").onclick = async () => {
+  await loadJobs();
+  await showJob($("jobid").value);
+  say("Refreshed.", "good");
+};
+
+const saved = localStorage.getItem("proofpay_address");
+if (saved) $("addr").value = saved;
+$("connect").addEventListener("click", () => localStorage.setItem("proofpay_address", $("addr").value.trim()));
+</script>
+</body>
+</html>
