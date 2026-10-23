@@ -18,7 +18,7 @@ The contract uses an LLM and live web data to make a subjective decision, then r
 
 ## Contract
 - Network: GenLayer Studio
-- Address: `0xee9D09348D8b81E1E49B42002BEC3a29bce3cC2E`
+- Address: `0x51BcE089F35e7C9C8a030a855f89999578aD8b91`
 - Methods: `create_job`, `submit_work`, `evaluate`, `get_job`
 
 ## Run the app
