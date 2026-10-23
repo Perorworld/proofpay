@@ -8,6 +8,10 @@ Freelancers and clients often disagree about whether finished work meets the ori
 3. A GenLayer Intelligent Contract reads the work and judges it against the brief. Validators reach consensus on the result.
 4. The verdict (accepted or rejected) and a short reason are recorded on-chain.
 5. Payment is marked as released if accepted, or held if rejected (simulated).
+### New in version 2
+- **Score out of 100:** the AI judge gives a score. 70 or more means the work is accepted.
+- **One appeal:** if work is rejected, the freelancer can explain why and ask for one more review.
+- **Roles:** the client names the freelancer, and only that freelancer can submit work or appeal.
 
 ## Why GenLayer
 The contract uses an LLM and live web data to make a subjective decision, then reaches agreement between validators. A normal smart contract can't do this.
