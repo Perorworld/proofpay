@@ -1,36 +1,122 @@
-# ProofPay: Intelligent Freelance Escrow
+# { "Depends": "py-genlayer:1jb45aa8ynh2a9c9xn3b7qqh8sm5q93hwfp7jqmwsfhh8jpz09h6" }
+from genlayer import *
+import json
 
-Freelancers and clients often disagree about whether finished work meets the original brief. ProofPay fixes this with an AI judge on GenLayer.
 
-## How it works
-1. The client creates a job with a brief and acceptance criteria before work starts.
-2. The freelancer submits a link to the finished work.
-3. A GenLayer Intelligent Contract reads the work and judges it against the brief. Validators reach consensus on the result.
-4. The verdict (accepted or rejected) and a short reason are recorded on-chain.
-5. Payment is marked as released if accepted, or held if rejected (simulated).
-### New in version 2
-- **Score out of 100:** the AI judge gives a score. 70 or more means the work is accepted.
-- **One appeal:** if work is rejected, the freelancer can explain why and ask for one more review.
-- **Roles:** the client names the freelancer, and only that freelancer can submit work or appeal.
+class ProofPay(gl.Contract):
+    jobs: TreeMap[str, str]
+    job_count: u256
 
-## Why GenLayer
-The contract uses an LLM and live web data to make a subjective decision, then reaches agreement between validators. A normal smart contract can't do this.
+    def __init__(self):
+        self.job_count = u256(0)
 
-## What's in this repo
-- `proofpay.py`: the Intelligent Contract
-- `proofpay.html`: the app that talks to the contract
+    def _me(self) -> str:
+        return str(gl.message.sender_address).lower()
 
-## Contract
-- Network: GenLayer Studio
-- Address: `0x51BcE089F35e7C9C8a030a855f89999578aD8b91`
-- Methods: `create_job`, `submit_work`, `evaluate`, `get_job`
+    @gl.public.write
+    def create_job(
+        self,
+        title: str,
+        brief: str,
+        criteria: str,
+        amount: u256,
+        freelancer: str,
+    ) -> str:
+        job_id = str(self.job_count)
+        self.jobs[job_id] = json.dumps({
+            "title": title,
+            "brief": brief,
+            "criteria": criteria,
+            "amount": int(amount),
+            "client": self._me(),
+            "freelancer": freelancer.strip().lower(),
+            "submitter": "",
+            "deliverable": "",
+            "status": "OPEN",
+            "score": 0,
+            "reason": "",
+            "payment": "HELD",
+            "appeal": "",
+            "appeals": 0,
+        })
+        self.job_count = u256(int(self.job_count) + 1)
+        return job_id
 
-## Run the app
-1. Open `proofpay.html` in your browser.
-2. Paste the contract address and click Connect.
-3. Create a job, submit a public link, and click Evaluate with AI.
+    @gl.public.write
+    def submit_work(self, job_id: str, deliverable_url: str) -> None:
+        job = json.loads(self.jobs[job_id])
+        me = self._me()
+        if job["freelancer"] != "" and me != job["freelancer"]:
+            raise Exception("Only the freelancer can submit work")
+        if job["status"] != "OPEN":
+            raise Exception("Work was already submitted")
+        job["deliverable"] = deliverable_url
+        job["submitter"] = me
+        job["status"] = "SUBMITTED"
+        self.jobs[job_id] = json.dumps(job)
 
-## Demo
-Add your screenshots or video link here.
+    @gl.public.write
+    def appeal(self, job_id: str, message: str) -> None:
+        job = json.loads(self.jobs[job_id])
+        me = self._me()
+        if me != job["submitter"]:
+            raise Exception("Only the freelancer who submitted can appeal")
+        if job["status"] != "REJECTED":
+            raise Exception("Only rejected work can be appealed")
+        if job["appeals"] >= 1:
+            raise Exception("This job was already appealed once")
+        job["appeal"] = message
+        job["appeals"] = 1
+        job["status"] = "APPEALED"
+        self.jobs[job_id] = json.dumps(job)
 
-Built by Francis Ogbonaya (@PEROR250)
+    @gl.public.write
+    def evaluate(self, job_id: str) -> str:
+        job = json.loads(self.jobs[job_id])
+        me = self._me()
+        if me not in (job["client"], job["freelancer"], job["submitter"]):
+            raise Exception("Only the client or the freelancer can request a review")
+        if job["status"] not in ("SUBMITTED", "APPEALED"):
+            raise Exception("There is no work waiting for review")
+
+        url = job["deliverable"]
+        brief = job["brief"]
+        criteria = job["criteria"]
+        appeal_text = job["appeal"]
+
+        def judge() -> str:
+            page = gl.nondet.web.render(url, mode="text")
+            prompt = f"""
+You are a fair judge for a freelance job.
+Brief: {brief}
+Acceptance criteria: {criteria}
+Freelancer appeal (may be empty): {appeal_text}
+Deliverable content: {page[:4000]}
+
+Score how well the deliverable meets the brief and the acceptance criteria from 0 to 100.
+70 or more means the work meets the brief. Below 70 means it does not.
+Reply only with JSON: {{"score": 0-100, "reason": "one short sentence"}}
+"""
+            return gl.nondet.exec_prompt(prompt)
+
+        result = gl.eq_principle.prompt_comparative(
+            judge,
+            "The two scores must be within 15 points of each other and on the same side of 70",
+        )
+        clean = result.replace("```json", "").replace("```", "").strip()
+        verdict = json.loads(clean)
+
+        score = int(float(verdict["score"]))
+        score = max(0, min(100, score))
+        accepted = score >= 70
+
+        job["score"] = score
+        job["reason"] = verdict["reason"]
+        job["status"] = "ACCEPTED" if accepted else "REJECTED"
+        job["payment"] = "RELEASED" if accepted else "HELD"
+        self.jobs[job_id] = json.dumps(job)
+        return job["status"]
+
+    @gl.public.view
+    def get_job(self, job_id: str) -> str:
+        return self.jobs[job_id]
