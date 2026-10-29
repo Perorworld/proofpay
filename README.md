@@ -1,38 +1,39 @@
-ProofPay: AI-Judged Freelance Escrow (real GEN)
+# ProofPay v2: AI-Judged Freelance Escrow with real GEN
 
-A client locks real GEN in a GenLayer Intelligent Contract. An AI judge scores the freelancer's work. A passing score pays the freelancer. A failing score keeps the money locked until the freelancer appeals or gives up, and the client can then get a refund.
+A client locks real GEN in a GenLayer Intelligent Contract. An AI judge scores each acceptance criterion. A passing average pays the freelancer, a failing one keeps the money locked, and deadlines, appeals and refunds make sure funds never get stuck.
 
-Files
-contracts/proofpay_escrow.py: the Intelligent Contract (deploy this one)
-index.html: the app that calls the contract
-tests/test_proofpay_escrow.py and tests/genlayer.py: automated tests
-Escrow lifecycle
-Fund: the client calls create_job with GEN attached. The GEN is held by the contract.
-Work: the freelancer calls submit_work with a public link.
-Judge: evaluate scores the work from 0 to 100 using an LLM with validator consensus.
-Release: a score of 70 or more marks the job ACCEPTED and sends the locked GEN to the freelancer.
-Hold: a lower score marks the job REJECTED. The GEN stays locked.
-Appeal: the freelancer can appeal once with appeal, then the work is judged again.
-Refund:
-cancel_job: the client gets the GEN back before any work is submitted.
-concede: the freelancer gives up on a rejected job and the client is refunded.
-refund: the client claims the GEN after a rejection that was already appealed.
+## What is new in v2
+- **Deadlines and auto-settlement:** every job has a delivery deadline and an appeal window. Late work is refused, the client can cancel after a missed deadline, and a rejection with no appeal can be refunded once the window ends.
+- **Per-criterion scoring:** the client lists up to 8 criteria. The AI scores each one from 0 to 100 and the average decides the result (70 or more is accepted).
+- **On-chain reputation:** the contract tracks jobs created and funded for clients, and jobs completed, rejections, average score, appeals won and GEN earned for freelancers.
+- **Activity timeline:** every job records each step with the time and the address that did it.
+- **Wallet login:** the app works with any browser wallet (MetaMask, Rabby, Coinbase Wallet, Brave and others), optional WalletConnect for phone wallets, and built-in test accounts.
+- **Public testnet:** the app can switch between GenLayer Studio and the Bradbury testnet.
 
-State is always updated before money moves, so a job can never be paid or refunded twice.
+## Files
+- `contracts/proofpay_escrow_v2.py`: the Intelligent Contract
+- `index.html`: the app
+- `tests/`: automated tests (`test_proofpay_escrow_v2.py`, plus the earlier suite and the `genlayer.py` test runtime)
 
-Contract
-Network: GenLayer Studio
-Address: 0x581CE42D6E205817C47A1e502857E36aF6C0e69D
-Methods: create_job (payable), submit_work, evaluate, appeal, cancel_job, refund, concede, get_job
-Tests
+## Escrow lifecycle
+1. **Fund:** `create_job` is payable. The client attaches GEN, sets the criteria, a delivery time and an appeal window, and can name the freelancer.
+2. **Deliver:** `submit_work` records a public link, only before the deadline and only from the named freelancer.
+3. **Judge:** `evaluate` scores each criterion with an LLM and validator consensus.
+4. **Release:** an average of 70 or more sends the locked GEN to the freelancer.
+5. **Hold:** a lower average keeps the GEN locked.
+6. **Appeal:** `appeal` (once, inside the appeal window) triggers a second review.
+7. **Refund:** `cancel_job` (no work submitted; for a named freelancer only after the deadline), `concede` (the freelancer gives up), `refund` (the client, after an appeal or once the appeal window ends).
 
-The tests cover funding, release, hold, appeal, every refund path, wrong callers, broken judge answers, double-spend attempts, and money conservation.
+State is always saved before money moves, so a job can never be paid or refunded twice.
 
+## Contract
+- Studio address: `0x1bc926800b82B1555fcAF27d987D837627DEF20B`
+- Bradbury address: `PASTE_BRADBURY_ADDRESS`
+- Methods: `create_job` (payable), `submit_work`, `evaluate`, `appeal`, `cancel_job`, `refund`, `concede`, `get_job`, `get_reputation`
+
+## Tests
+```
 pip install pytest
 pytest tests -q
-
-They run the contract logic against a small simulated GenLayer runtime (tests/genlayer.py) with a scripted AI judge, so they are fast and need no network.
-
-App
-
-Open the live link, click Get test GEN if needed, create a job with an amount, submit a public link, and click Evaluate with AI.
+```
+The tests cover funding, scoring, every refund path, deadlines and the appeal window, reputation, the timeline, wrong callers, broken judge answers, double-spend attempts and money conservation. They run the contract against a small simulated GenLayer runtime with a scripted judge and a controllable clock.
